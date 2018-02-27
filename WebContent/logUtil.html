@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+    <title>日志获取</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no">
+    <meta content="telephone=no" name="format-detection">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link href="<%=basePath%>wx/send_files/base.css" type="text/css" rel="stylesheet">
+    <link href="<%=basePath%>wx/send_files/index.css" type="text/css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="<%=basePath%>wx/send_files/kfmain.css">
+
+</head>
+<body >
+ <br/>
+          用户名:<input id="text" type="text" /><br/>
+    <button onclick="getUserList()">获取用户列表</button>
+    <button onclick="getUserLog()">获取用户日志</button>
+    <button onclick="clearPageLog()">清空页面日志</button>
+    <button onclick="closeWebSocket()">关闭连接</button>
+    <div id="message">
+    </div>
+  </body>
+ <script type="text/javascript" src="debugout.js"></script>
+    <script type="text/javascript">
+    
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-7742845-9', 'inorganik.github.io');
+    ga('send', 'pageview');
+
+    </script>
+</head>
+  <script type="text/javascript">
+  	  //记录日志
+  	  var bugout = new debugout;
+      var websocket = null;
+
+      //判断当前浏览器是否支持WebSocket
+      if('WebSocket' in window){
+          websocket = new WebSocket("ws://localhost:8080/test//logUtil/admin");
+      }
+      else{
+          alert('Not support websocket')
+      }
+
+      //连接发生错误的回调方法
+      websocket.onerror = function(){
+          setMessageInnerHTML("error");
+      };
+
+      //连接成功建立的回调方法
+      websocket.onopen = function(event){
+          setMessageInnerHTML("open");
+      }
+
+      //接收到消息的回调方法
+      websocket.onmessage = function(event){
+    	  var msg = JSON.parse(event.data);
+    	  if(msg&&msg.msgType=="text"){
+    		  if(msg.userList){
+    	          setMessageInnerHTML(JSON.stringify(msg.userList));
+    		  }
+    	  }else if(msg&&msg.msgType=="log"){
+    		  var file = "data:text/plain;charset=utf-8,";
+    		    var logFile = msg.log;
+    		    var encoded = encodeURIComponent(logFile);
+    		    file += encoded;
+    		    var a = document.createElement('a');
+    		    a.href = file;
+    		    a.target   = '_blank';
+    		    a.download = msg.logUser;
+    		    document.body.appendChild(a);
+    		    a.click();
+    		    a.remove();
+    	  }
+      }
+
+      //连接关闭的回调方法
+      websocket.onclose = function(){
+          setMessageInnerHTML("close");
+      }
+
+      //监听窗口关闭事件，当窗口关闭时，主动去关闭websocket连接，防止连接还没断开就关闭窗口，server端会抛异常。
+      window.onbeforeunload = function(){
+          websocket.close();
+      }
+
+      //将消息显示在网页上
+      function setMessageInnerHTML(innerHTML){
+          document.getElementById('message').innerHTML += '<br/>--------------------------------------------------<br/>'+ innerHTML ;
+      }
+
+      //关闭连接
+      function closeWebSocket(){
+          websocket.close();
+      }
+
+      //发送获取日志消息
+      function getUserLog(){
+    	  var targetUser = document.getElementById('text').value;
+    	  if(targetUser==null||targetUser==""){
+    		alert("请输入需要获取日志的用户名");  
+    		return;
+    	  }
+    	  var message = {
+    			"msgType":"cmd",
+    			"cmd":"getLog",
+    			"password":"123456",
+    			"target":document.getElementById('text').value,
+    			"username":"admin"
+    		}
+    	  websocket.send(JSON.stringify(message));
+      }
+    //发送获取用户列表消息
+      function getUserList(){
+    	  var message = {
+    			"msgType":"cmd",
+    			"cmd":"getUserList",
+    			"password":"123456",
+    			"target":document.getElementById('text').value,
+    			"username":"admin"
+    		}
+    	  websocket.send(JSON.stringify(message));
+      }
+      //发送获取日志消息
+      function clearPageLog(){
+    	  document.getElementById('message').innerHTML ="";
+      }
+  </script>
+</html>

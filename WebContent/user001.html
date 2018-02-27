@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+    <title>用户日志记录</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no">
+    <meta content="telephone=no" name="format-detection">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link href="<%=basePath%>wx/send_files/base.css" type="text/css" rel="stylesheet">
+    <link href="<%=basePath%>wx/send_files/index.css" type="text/css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="<%=basePath%>wx/send_files/kfmain.css">
+
+</head>
+<body >
+ 本页面测试用户页面的日志记录<br/>
+     <button onclick="closeWebSocket()">Close</button>
+    <div id="message">
+    </div>
+  </body>
+ <script type="text/javascript" src="debugout.js"></script>
+    <script type="text/javascript">
+    
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-7742845-9', 'inorganik.github.io');
+    ga('send', 'pageview');
+
+    </script>
+</head>
+  <script type="text/javascript">
+  	  //记录日志
+  	  var bugout = new debugout;
+  	  bugout.log("测试一下微信的日志"+(new Date()).getTime());
+      var websocket = null;
+
+      //判断当前浏览器是否支持WebSocket
+      if('WebSocket' in window){
+          websocket = new WebSocket("ws://localhost:8080/test//logUtil/user001");//这里的user001 为用户名,请修改
+      }
+      else{
+          alert('Not support websocket')
+      }
+
+      //连接发生错误的回调方法
+      websocket.onerror = function(){
+          setMessageInnerHTML("error");
+      };
+
+      //连接成功建立的回调方法
+      websocket.onopen = function(event){
+          setMessageInnerHTML("open");
+      }
+
+      //接收到消息的回调方法
+      websocket.onmessage = function(event){
+    	  var msg = JSON.parse(event.data);
+    	  if(msg&&msg.msgType=="cmd"){
+    		  if(msg.cmd=="getLog"){
+    			  send();
+    			  
+    	          setMessageInnerHTML("getLog");
+    		  }
+    	  }else{
+    		  
+              setMessageInnerHTML(event.data);
+    	  }
+    	 
+      }
+
+      //连接关闭的回调方法
+      websocket.onclose = function(){
+          setMessageInnerHTML("close");
+      }
+
+      //监听窗口关闭事件，当窗口关闭时，主动去关闭websocket连接，防止连接还没断开就关闭窗口，server端会抛异常。
+      window.onbeforeunload = function(){
+          websocket.close();
+      }
+
+      //将消息显示在网页上
+      function setMessageInnerHTML(innerHTML){
+    	  document.getElementById('message').innerHTML += '<br/>--------------------------------------------------<br/>'+ innerHTML ;
+      }
+
+      //关闭连接
+      function closeWebSocket(){
+          websocket.close();
+      }
+
+      //发送消息
+      function send(){
+          var message = {
+        		  "msgType":"logSubmit",
+        		  "logUser":"user001",
+        		  "msg": bugout.getLog()
+          }
+          websocket.send(JSON.stringify(message));
+      }
+  </script>
+</html>
